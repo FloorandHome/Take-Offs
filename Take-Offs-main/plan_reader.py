@@ -95,7 +95,7 @@ def _build_symbol_map(rooms: list[Room]) -> dict[str, str]:
     symbol_map: dict[str, str] = {}
     fallback = "123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-    for idx, room in enumerate(rooms):
+    for room in rooms:
         preferred = room.name.strip()[:1].upper()
         if preferred and preferred.isalnum() and preferred not in used:
             symbol = preferred
