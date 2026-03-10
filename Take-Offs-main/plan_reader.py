@@ -5,6 +5,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
+import shutil
+import subprocess
+import tempfile
+import zlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
@@ -44,8 +49,15 @@ def _ensure_int(value: object, field: str, room_name: str) -> int:
 
 
 def load_plan(path: Path) -> BuildingPlan:
-    data = json.loads(path.read_text(encoding="utf-8"))
+    suffix = path.suffix.lower()
+    if suffix == ".pdf":
+        data = _load_pdf_plan(path)
+    else:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    return _parse_plan_data(data)
 
+
+def _parse_plan_data(data: object) -> BuildingPlan:
     if not isinstance(data, dict):
         raise PlanError("Plan must be a JSON object")
 
@@ -78,6 +90,174 @@ def load_plan(path: Path) -> BuildingPlan:
 
     _validate_no_overlap(rooms)
     return BuildingPlan(unit=unit.strip(), rooms=rooms)
+
+
+def _load_pdf_plan(path: Path) -> object:
+    raw_pdf = path.read_bytes()
+    candidate_texts = [raw_pdf.decode("latin-1", errors="ignore")]
+
+    stream_pattern = re.compile(rb"<<.*?>>\s*stream\r?\n(.*?)\r?\nendstream", re.DOTALL)
+    for match in stream_pattern.finditer(raw_pdf):
+        stream = match.group(1)
+        candidate_texts.append(stream.decode("latin-1", errors="ignore"))
+        try:
+            decompressed = zlib.decompress(stream)
+        except zlib.error:
+            continue
+        candidate_texts.append(decompressed.decode("latin-1", errors="ignore"))
+
+    data = _find_plan_in_texts(candidate_texts)
+    if data is not None:
+        return data
+
+    ocr_text = _ocr_pdf_text(path)
+    if ocr_text:
+        data = _find_plan_in_texts([ocr_text])
+        if data is not None:
+            return data
+
+    raise PlanError(
+        "No building plan data found in PDF. Provide a text-based PDF with embedded plan data, or install OCR tools for scanned/image PDFs."
+    )
+
+
+def _find_plan_in_texts(texts: Iterable[str]) -> object | None:
+    for text in texts:
+        candidate = _extract_json_object(text)
+        if candidate is not None:
+            try:
+                return json.loads(candidate)
+            except json.JSONDecodeError:
+                pass
+
+        candidate = _parse_labeled_plan_text(text)
+        if candidate is not None:
+            return candidate
+
+    return None
+
+
+def _extract_json_object(text: str) -> str | None:
+    start = 0
+    while True:
+        start = text.find("{", start)
+        if start == -1:
+            return None
+
+        depth = 0
+        in_string = False
+        escape = False
+        for index in range(start, len(text)):
+            char = text[index]
+            if in_string:
+                if escape:
+                    escape = False
+                elif char == "\\":
+                    escape = True
+                elif char == '"':
+                    in_string = False
+                continue
+
+            if char == '"':
+                in_string = True
+            elif char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    candidate = text[start : index + 1]
+                    if '"rooms"' in candidate or "'rooms'" in candidate:
+                        return candidate
+                    break
+        start += 1
+
+
+def _parse_labeled_plan_text(text: str) -> dict[str, object] | None:
+    unit_match = re.search(r"\bunit\b\s*[:=]?\s*([A-Za-z]+)\b", text, re.IGNORECASE)
+    unit = unit_match.group(1) if unit_match else "m"
+
+    room_blocks = re.finditer(
+        r"(?:\broom\b\s*[:=-]?\s*)?(?:\bname\b\s*[:=]\s*(?P<name>[A-Za-z][A-Za-z0-9 _-]*))(?P<body>.*?)(?=(?:\broom\b\s*[:=-]?\s*)?(?:\bname\b\s*[:=])|$)",
+        text,
+        re.IGNORECASE | re.DOTALL,
+    )
+
+    rooms: list[dict[str, object]] = []
+    for block in room_blocks:
+        name = block.group("name").strip(" -:\n\r\t")
+        body = block.group("body")
+        x = _find_number(body, "x")
+        y = _find_number(body, "y")
+        width = _find_number(body, "width")
+        height = _find_number(body, "height")
+        if None in {x, y, width, height}:
+            continue
+        rooms.append(
+            {
+                "name": name,
+                "x": x,
+                "y": y,
+                "width": width,
+                "height": height,
+            }
+        )
+
+    if not rooms:
+        return None
+
+    return {"unit": unit, "rooms": rooms}
+
+
+def _find_number(text: str, field: str) -> int | None:
+    match = re.search(rf"\b{field}\b\s*[:=]?\s*(-?\d+)\b", text, re.IGNORECASE)
+    if match is None:
+        return None
+    return int(match.group(1))
+
+
+def _ocr_pdf_text(path: Path) -> str | None:
+    tesseract = shutil.which("tesseract")
+    if tesseract is None:
+        return None
+
+    renderer = shutil.which("pdftoppm") or shutil.which("magick")
+    if renderer is None:
+        return None
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+        image_paths = _render_pdf_to_images(path, temp_path, renderer)
+        ocr_parts: list[str] = []
+        for image_path in image_paths:
+            result = subprocess.run(
+                [tesseract, str(image_path), "stdout"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            ocr_parts.append(result.stdout)
+        return "\n".join(ocr_parts).strip()
+
+
+def _render_pdf_to_images(path: Path, temp_path: Path, renderer: str) -> list[Path]:
+    if Path(renderer).name.lower() == "pdftoppm.exe" or Path(renderer).name.lower() == "pdftoppm":
+        output_prefix = temp_path / "page"
+        subprocess.run(
+            [renderer, "-png", str(path), str(output_prefix)],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return sorted(temp_path.glob("page-*.png"))
+
+    output_pattern = temp_path / "page-%03d.png"
+    subprocess.run(
+        [renderer, "-density", "300", str(path), str(output_pattern)],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return sorted(temp_path.glob("page-*.png"))
 
 
 def _validate_no_overlap(rooms: Iterable[Room]) -> None:
@@ -148,9 +328,9 @@ def render_room_dimensions(plan: BuildingPlan) -> str:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Read a building plan JSON file, map each room, and list dimensions.",
+        description="Read a building plan JSON or PDF file, map each room, and list dimensions.",
     )
-    parser.add_argument("plan_file", type=Path, help="Path to a building plan JSON file")
+    parser.add_argument("plan_file", type=Path, help="Path to a building plan JSON or PDF file")
     return parser.parse_args()
 
 
