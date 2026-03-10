@@ -1,6 +1,6 @@
 # Building Plan Room Mapper
 
-This program reads a building plan from JSON or PDF, maps each room on a simple top-view grid, and lists room dimensions.
+This program reads a building plan from JSON or PDF, maps each room on a simple top-view grid, and lists room dimensions. It is designed to work on Windows 10 and Windows 11.
 
 ## Plan format
 
@@ -37,12 +37,29 @@ If OCR tools are not installed, scanned/image PDFs will fail with a helpful erro
 
 ## Run
 
+Windows PowerShell or Command Prompt:
+
+```powershell
+py -3 plan_reader.py sample_plan.json
+py -3 plan_reader.py plan.pdf
+```
+
+Other platforms:
+
 ```bash
 python3 plan_reader.py sample_plan.json
 python3 plan_reader.py plan.pdf
 ```
 
 ## Test
+
+Windows PowerShell or Command Prompt:
+
+```powershell
+py -3 -m unittest discover -s tests -p "test_*.py"
+```
+
+Other platforms:
 
 ```bash
 python3 -m unittest discover -s tests -p 'test_*.py'

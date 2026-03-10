@@ -229,12 +229,7 @@ def _ocr_pdf_text(path: Path) -> str | None:
         image_paths = _render_pdf_to_images(path, temp_path, renderer)
         ocr_parts: list[str] = []
         for image_path in image_paths:
-            result = subprocess.run(
-                [tesseract, str(image_path), "stdout"],
-                capture_output=True,
-                text=True,
-                check=True,
-            )
+            result = _run_command([tesseract, str(image_path), "stdout"])
             ocr_parts.append(result.stdout)
         return "\n".join(ocr_parts).strip()
 
@@ -242,22 +237,24 @@ def _ocr_pdf_text(path: Path) -> str | None:
 def _render_pdf_to_images(path: Path, temp_path: Path, renderer: str) -> list[Path]:
     if Path(renderer).name.lower() == "pdftoppm.exe" or Path(renderer).name.lower() == "pdftoppm":
         output_prefix = temp_path / "page"
-        subprocess.run(
-            [renderer, "-png", str(path), str(output_prefix)],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
+        _run_command([renderer, "-png", str(path), str(output_prefix)])
         return sorted(temp_path.glob("page-*.png"))
 
     output_pattern = temp_path / "page-%03d.png"
-    subprocess.run(
-        [renderer, "-density", "300", str(path), str(output_pattern)],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
+    _run_command([renderer, "-density", "300", str(path), str(output_pattern)])
     return sorted(temp_path.glob("page-*.png"))
+
+
+def _run_command(args: list[str]) -> subprocess.CompletedProcess[str]:
+    command_kwargs: dict[str, object] = {
+        "capture_output": True,
+        "text": True,
+        "check": True,
+    }
+    create_no_window = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    if create_no_window:
+        command_kwargs["creationflags"] = create_no_window
+    return subprocess.run(args, **command_kwargs)
 
 
 def _validate_no_overlap(rooms: Iterable[Room]) -> None:
