@@ -1,6 +1,10 @@
 param(
     [Parameter(Mandatory = $true, Position = 0)]
-    [string]$PlanFile
+    [string]$PlanFile,
+
+    [Parameter(Mandatory = $false)]
+    [ValidateSet("1/8 in = 1 ft", "3/16 in = 1 ft", "1/4 in = 1 ft", "1/2 in = 1 ft")]
+    [string]$Scale = "1/4 in = 1 ft"
 )
 
 Set-StrictMode -Version Latest
@@ -51,7 +55,10 @@ function New-Room {
 }
 
 function Parse-PlanData {
-    param([object]$Data)
+    param(
+        [object]$Data,
+        [string]$Scale
+    )
 
     if ($null -eq $Data) {
         New-PlanError "Plan must be a JSON object"
@@ -87,6 +94,7 @@ function Parse-PlanData {
     [pscustomobject]@{
         unit  = $unit.Trim()
         rooms = $rooms
+        scale = $Scale
     }
 }
 
@@ -408,6 +416,7 @@ function Render-Map {
     }
 
     $rows = New-Object System.Collections.Generic.List[string]
+    $rows.Add("Scale: $($Plan.scale)")
     $rows.Add("Building plan map (top view):")
     for ($y = $maxY - 1; $y -ge 0; $y--) {
         $rows.Add(("{0,2} | " -f $y) + ($canvas[$y] -join " "))
@@ -447,7 +456,10 @@ function Render-RoomDimensions {
 }
 
 function Load-Plan {
-    param([string]$Path)
+    param(
+        [string]$Path,
+        [string]$Scale
+    )
 
     if (-not (Test-Path -LiteralPath $Path)) {
         New-PlanError "Plan file not found: $Path"
@@ -461,10 +473,10 @@ function Load-Plan {
         $data = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
     }
 
-    return Parse-PlanData -Data $data
+    return Parse-PlanData -Data $data -Scale $Scale
 }
 
-$plan = Load-Plan -Path $PlanFile
+$plan = Load-Plan -Path $PlanFile -Scale $Scale
 Write-Output (Render-Map -Plan $plan)
 Write-Output ""
 Write-Output (Render-RoomDimensions -Plan $plan)

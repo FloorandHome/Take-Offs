@@ -2,6 +2,14 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Open Plan Reader Upload UI",
+      "type": "PowerShell",
+      "request": "launch",
+      "script": "${workspaceFolder}/plan_reader_ui.ps1",
+      "cwd": "${workspaceFolder}",
+      "createTemporaryIntegratedConsole": true
+    },
+    {
       "name": "Debug Plan Reader (Sample Plan)",
       "type": "PowerShell",
       "request": "launch",

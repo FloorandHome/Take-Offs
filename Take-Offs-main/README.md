@@ -1,6 +1,6 @@
 # Building Plan Room Mapper
 
-This project now includes a native PowerShell implementation for Windows 10 and Windows 11 in `plan_reader.ps1`. It reads a building plan from JSON or PDF, maps each room on a simple top-view grid, and lists room dimensions.
+This project now includes a native PowerShell implementation for Windows 10 and Windows 11 in `plan_reader.ps1`, plus a small upload UI in `plan_reader_ui.ps1`. It reads a building plan from JSON or PDF, maps each room on a simple top-view grid, and lists room dimensions.
 
 ## Plan format
 
@@ -25,6 +25,15 @@ Example JSON payload:
 - `width`, `length`: positive integer dimensions
 - Rooms cannot overlap
 
+## Scale options
+
+The PowerShell reader and upload UI support these plan scales:
+
+- `1/8 in = 1 ft`
+- `3/16 in = 1 ft`
+- `1/4 in = 1 ft`
+- `1/2 in = 1 ft`
+
 ## PDF and OCR support
 
 - Text PDFs: the program searches for embedded plan JSON or labeled room data
@@ -37,15 +46,22 @@ If OCR tools are not installed, scanned/image PDFs will fail with a helpful erro
 
 ## Run
 
-PowerShell:
+PowerShell CLI:
 
 ```powershell
-.\plan_reader.ps1 .\sample_plan.json
-.\plan_reader.ps1 .\plan.pdf
+.\plan_reader.ps1 .\sample_plan.json -Scale "1/4 in = 1 ft"
+.\plan_reader.ps1 .\plan.pdf -Scale "1/8 in = 1 ft"
+```
+
+PowerShell upload UI:
+
+```powershell
+.\plan_reader_ui.ps1
 ```
 
 ## VS Code
 
-- Press `F5` and choose `Debug Plan Reader (Sample Plan)` or `Debug Plan Reader (User Plan)`
-- Run `Terminal: Run Build Task` to launch the default sample-plan task
+- Press `F5` and choose `Open Plan Reader Upload UI`
+- Run `Terminal: Run Build Task` to open the upload UI as the default task
+- Use the scale dropdown in the `Upload Floor Plan Pdf` section before processing the plan
 - Install the recommended PowerShell extension if VS Code prompts for it
