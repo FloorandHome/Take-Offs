@@ -33,8 +33,8 @@ class PlanReaderTests(unittest.TestCase):
             {
                 "unit": "m",
                 "rooms": [
-                    {"name": "A", "x": 0, "y": 0, "width": 2, "height": 2},
-                    {"name": "B", "x": 2, "y": 0, "width": 1, "height": 2},
+                    {"name": "A", "x": 0, "y": 0, "width": 2, "length": 2},
+                    {"name": "B", "x": 2, "y": 0, "width": 1, "length": 2},
                 ],
             }
         )
@@ -44,7 +44,7 @@ class PlanReaderTests(unittest.TestCase):
 
     def test_load_plan_from_pdf(self):
         path = self._write_pdf(
-            '{"unit":"m","rooms":[{"name":"Living","x":0,"y":0,"width":6,"height":4}]}'
+            '{"unit":"m","rooms":[{"name":"Living","x":0,"y":0,"width":6,"length":4}]}'
         )
         plan = load_plan(path)
         self.assertEqual(plan.unit, "m")
@@ -56,7 +56,7 @@ class PlanReaderTests(unittest.TestCase):
         path = self._write_pdf("Scanned image data only")
         with patch(
             "plan_reader._ocr_pdf_text",
-            return_value="Unit: m\nName: Living X: 0 Y: 0 Width: 6 Height: 4",
+            return_value="Unit: m\nName: Living X: 0 Y: 0 Width: 6 Length: 4",
         ):
             plan = load_plan(path)
 
@@ -76,8 +76,8 @@ class PlanReaderTests(unittest.TestCase):
             {
                 "unit": "m",
                 "rooms": [
-                    {"name": "A", "x": 0, "y": 0, "width": 3, "height": 2},
-                    {"name": "B", "x": 2, "y": 0, "width": 3, "height": 2},
+                    {"name": "A", "x": 0, "y": 0, "width": 3, "length": 2},
+                    {"name": "B", "x": 2, "y": 0, "width": 3, "length": 2},
                 ],
             }
         )
@@ -89,7 +89,7 @@ class PlanReaderTests(unittest.TestCase):
             {
                 "unit": "m",
                 "rooms": [
-                    {"name": "Kitchen", "x": 0, "y": 0, "width": 2, "height": 1}
+                    {"name": "Kitchen", "x": 0, "y": 0, "width": 2, "length": 1}
                 ],
             }
         )
@@ -98,6 +98,7 @@ class PlanReaderTests(unittest.TestCase):
         dimensions_output = render_room_dimensions(plan)
         self.assertIn("Legend", map_output)
         self.assertIn("Kitchen", dimensions_output)
+        self.assertIn("Length", dimensions_output)
         self.assertIn("Total area", dimensions_output)
         self.assertIn("m^2", dimensions_output)
 

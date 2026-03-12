@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Floor Plan Takeoff</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.3.136/pdf.min.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <main class="app-shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Floor Plan Takeoff</p>
+        <h1>Upload a PDF, trace rooms, and total every dimension.</h1>
+        <p class="hero-copy">
+          Calibrate the drawing once, then drag room rectangles directly over the floor plan to get
+          per-room dimensions and total area.
+        </p>
+      </div>
+      <div class="hero-card">
+        <label class="upload-card" for="pdf-upload">
+          <span class="upload-title">Upload Floor Plan PDF</span>
+          <span class="upload-subtitle">Best with a single-page plan or first page containing the full layout.</span>
+          <input id="pdf-upload" type="file" accept=".pdf,application/pdf">
+        </label>
+        <div class="file-meta">
+          <span id="file-name">No PDF loaded</span>
+          <button id="clear-plan" type="button" class="ghost-button">Clear plan</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="workspace">
+      <div class="panel controls">
+        <div class="panel-header">
+          <h2>Setup</h2>
+          <p>Set the real-world scale before tracing rooms.</p>
+        </div>
+
+        <div class="control-group">
+          <label for="unit-select">Unit</label>
+          <select id="unit-select">
+            <option value="ft">Feet</option>
+            <option value="m">Meters</option>
+            <option value="in">Inches</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label for="known-length">Known line length</label>
+          <input id="known-length" type="number" min="0.01" step="0.01" placeholder="e.g. 12">
+          <small>Use calibrate mode, click two points on the plan, then enter the real length.</small>
+        </div>
+
+        <div class="button-row">
+          <button id="calibrate-mode" type="button">Calibrate scale</button>
+          <button id="room-mode" type="button" class="secondary">Draw room</button>
+        </div>
+
+        <div class="control-group">
+          <label for="room-name">Room name</label>
+          <input id="room-name" type="text" maxlength="40" placeholder="Living Room">
+        </div>
+
+        <div class="status-block">
+          <p><strong>Mode:</strong> <span id="mode-label">Idle</span></p>
+          <p><strong>Scale:</strong> <span id="scale-label">Not calibrated</span></p>
+          <p id="status-text">Upload a PDF to begin.</p>
+        </div>
+
+        <div class="tips">
+          <h3>How to use</h3>
+          <ol>
+            <li>Upload the floor plan PDF.</li>
+            <li>Choose <strong>Calibrate scale</strong> and click two points with a known distance.</li>
+            <li>Enter that real-world distance.</li>
+            <li>Choose <strong>Draw room</strong> and drag a room box over the plan.</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="panel viewer-panel">
+        <div class="viewer-header">
+          <div>
+            <h2>Plan Viewer</h2>
+            <p>First page of the uploaded PDF</p>
+          </div>
+          <button id="undo-room" type="button" class="ghost-button">Remove last room</button>
+        </div>
+
+        <div id="viewer-frame" class="viewer-frame">
+          <canvas id="pdf-canvas"></canvas>
+          <svg id="overlay" class="overlay"></svg>
+          <div id="empty-state" class="empty-state">
+            <p>Your uploaded floor plan will appear here.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel summary">
+        <div class="panel-header">
+          <h2>Dimensions</h2>
+          <p>Live totals update as rooms are added.</p>
+        </div>
+
+        <div class="summary-card">
+          <span>Total mapped rooms</span>
+          <strong id="room-count">0</strong>
+        </div>
+        <div class="summary-card">
+          <span>Total area</span>
+          <strong id="total-area">0</strong>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Room</th>
+              <th>Width</th>
+              <th>Height</th>
+              <th>Area</th>
+            </tr>
+          </thead>
+          <tbody id="room-table-body">
+            <tr class="empty-row">
+              <td colspan="4">No rooms mapped yet.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

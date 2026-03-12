@@ -21,15 +21,15 @@ class Room:
     x: int
     y: int
     width: int
-    height: int
+    length: int
 
     @property
     def area(self) -> int:
-        return self.width * self.height
+        return self.width * self.length
 
     @property
     def perimeter(self) -> int:
-        return 2 * (self.width + self.height)
+        return 2 * (self.width + self.length)
 
 
 @dataclass(frozen=True)
@@ -81,12 +81,12 @@ def _parse_plan_data(data: object) -> BuildingPlan:
         x = _ensure_int(entry.get("x"), "x", name)
         y = _ensure_int(entry.get("y"), "y", name)
         width = _ensure_int(entry.get("width"), "width", name)
-        height = _ensure_int(entry.get("height"), "height", name)
+        length = _ensure_int(entry.get("length"), "length", name)
 
-        if width <= 0 or height <= 0:
-            raise PlanError(f"Room '{name}' must have positive width and height")
+        if width <= 0 or length <= 0:
+            raise PlanError(f"Room '{name}' must have positive width and length")
 
-        rooms.append(Room(name=name.strip(), x=x, y=y, width=width, height=height))
+        rooms.append(Room(name=name.strip(), x=x, y=y, width=width, length=length))
 
     _validate_no_overlap(rooms)
     return BuildingPlan(unit=unit.strip(), rooms=rooms)
@@ -189,8 +189,8 @@ def _parse_labeled_plan_text(text: str) -> dict[str, object] | None:
         x = _find_number(body, "x")
         y = _find_number(body, "y")
         width = _find_number(body, "width")
-        height = _find_number(body, "height")
-        if None in {x, y, width, height}:
+        length = _find_number(body, "length")
+        if None in {x, y, width, length}:
             continue
         rooms.append(
             {
@@ -198,7 +198,7 @@ def _parse_labeled_plan_text(text: str) -> dict[str, object] | None:
                 "x": x,
                 "y": y,
                 "width": width,
-                "height": height,
+                "length": length,
             }
         )
 
@@ -262,7 +262,7 @@ def _validate_no_overlap(rooms: Iterable[Room]) -> None:
     for i, room_a in enumerate(rooms_list):
         for room_b in rooms_list[i + 1 :]:
             overlap_x = room_a.x < room_b.x + room_b.width and room_b.x < room_a.x + room_a.width
-            overlap_y = room_a.y < room_b.y + room_b.height and room_b.y < room_a.y + room_a.height
+            overlap_y = room_a.y < room_b.y + room_b.length and room_b.y < room_a.y + room_a.length
             if overlap_x and overlap_y:
                 raise PlanError(f"Rooms '{room_a.name}' and '{room_b.name}' overlap")
 
@@ -285,13 +285,13 @@ def _build_symbol_map(rooms: list[Room]) -> dict[str, str]:
 
 def render_map(plan: BuildingPlan) -> str:
     max_x = max(room.x + room.width for room in plan.rooms)
-    max_y = max(room.y + room.height for room in plan.rooms)
+    max_y = max(room.y + room.length for room in plan.rooms)
 
     canvas = [["." for _ in range(max_x)] for _ in range(max_y)]
     symbol_map = _build_symbol_map(plan.rooms)
     for room in plan.rooms:
         symbol = symbol_map[room.name]
-        for y in range(room.y, room.y + room.height):
+        for y in range(room.y, room.y + room.length):
             for x in range(room.x, room.x + room.width):
                 canvas[y][x] = symbol
 
@@ -308,14 +308,14 @@ def render_room_dimensions(plan: BuildingPlan) -> str:
     unit2 = f"{plan.unit}^2"
     lines = [
         "Room dimensions:",
-        f"{'Room':<20} {'Position (x,y)':<15} {'Width':<7} {'Height':<7} {'Area':<8} {'Perimeter':<10}",
+        f"{'Room':<20} {'Position (x,y)':<15} {'Width':<7} {'Length':<7} {'Area':<8} {'Perimeter':<10}",
         "-" * 75,
     ]
     total_area = 0
     for room in plan.rooms:
         total_area += room.area
         lines.append(
-            f"{room.name:<20} ({room.x},{room.y}){'':<6} {room.width:<7}{room.height:<7}{str(room.area) + ' ' + unit2:<8}{str(room.perimeter) + ' ' + plan.unit:<10}"
+            f"{room.name:<20} ({room.x},{room.y}){'':<6} {room.width:<7}{room.length:<7}{str(room.area) + ' ' + unit2:<8}{str(room.perimeter) + ' ' + plan.unit:<10}"
         )
 
     lines.append("-" * 75)
