@@ -1,0 +1,27 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Plan Reader (Sample Plan)",
+      "type": "PowerShell",
+      "request": "launch",
+      "script": "${workspaceFolder}/plan_reader.ps1",
+      "args": [
+        "${workspaceFolder}/sample_plan.json"
+      ],
+      "cwd": "${workspaceFolder}",
+      "createTemporaryIntegratedConsole": true
+    },
+    {
+      "name": "Debug Plan Reader (User Plan)",
+      "type": "PowerShell",
+      "request": "launch",
+      "script": "${workspaceFolder}/plan_reader.ps1",
+      "args": [
+        "${workspaceFolder}/user_plan.json"
+      ],
+      "cwd": "${workspaceFolder}",
+      "createTemporaryIntegratedConsole": true
+    }
+  ]
+}

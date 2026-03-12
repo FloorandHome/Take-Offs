@@ -43,3 +43,9 @@ PowerShell:
 .\plan_reader.ps1 .\sample_plan.json
 .\plan_reader.ps1 .\plan.pdf
 ```
+
+## VS Code
+
+- Press `F5` and choose `Debug Plan Reader (Sample Plan)` or `Debug Plan Reader (User Plan)`
+- Run `Terminal: Run Build Task` to launch the default sample-plan task
+- Install the recommended PowerShell extension if VS Code prompts for it
